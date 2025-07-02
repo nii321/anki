@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>暗記確認アプリ - 修正版</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- フォルダ一覧画面 -->
+        <div id="folder-list-view" class="view">
+            <header class="app-header">
+                <h1>暗記確認アプリ</h1>
+                <p class="subtitle">フォルダを作成し、文章を追加して、進捗を確認しましょう。</p>
+            </header>
+
+            <div class="folder-creation">
+                <input type="text" id="new-folder-input" placeholder="新しいフォルダ名" maxlength="50">
+                <button id="create-folder-btn" class="primary-btn">
+                    <span class="plus-icon">+</span> フォルダ作成
+                </button>
+            </div>
+
+            <div class="progress-summary">
+                <div class="progress-bar">
+                    <div class="progress-segment perfect" id="total-perfect-progress"></div>
+                    <div class="progress-segment almost" id="total-almost-progress"></div>
+                    <div class="progress-segment not-yet" id="total-not-yet-progress"></div>
+                </div>
+                <div class="progress-stats">
+                    <span class="stat perfect-stat">
+                        <span class="dot perfect"></span>
+                        <span id="total-perfect-count">0</span> (0%)
+                    </span>
+                    <span class="stat almost-stat">
+                        <span class="dot almost"></span>
+                        <span id="total-almost-count">0</span> (0%)
+                    </span>
+                    <span class="stat not-yet-stat">
+                        <span class="dot not-yet"></span>
+                        <span id="total-not-yet-count">0</span> (0%)
+                    </span>
+                </div>
+            </div>
+
+            <div class="folders-container">
+                <div id="folders-list"></div>
+                <div id="empty-state" class="empty-state">
+                    <div class="folder-icon">📁</div>
+                    <h3>フォルダ名</h3>
+                    <p>まだフォルダがありません。<br>上記のフィールドから新しいフォルダを作成してください。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 文章一覧画面 -->
+        <div id="sentence-list-view" class="view hidden">
+            <header class="folder-header">
+                <button id="back-btn" class="back-btn">←</button>
+                <h2 id="current-folder-name">フォルダ名</h2>
+                <button id="delete-folder-btn" class="delete-btn">🗑️</button>
+            </header>
+
+            <div class="progress-summary">
+                <div class="progress-bar">
+                    <div class="progress-segment perfect" id="folder-perfect-progress"></div>
+                    <div class="progress-segment almost" id="folder-almost-progress"></div>
+                    <div class="progress-segment not-yet" id="folder-not-yet-progress"></div>
+                </div>
+                <div class="progress-stats">
+                    <span class="stat perfect-stat">
+                        <span class="dot perfect"></span>
+                        <span id="folder-perfect-count">0</span> (0%)
+                    </span>
+                    <span class="stat almost-stat">
+                        <span class="dot almost"></span>
+                        <span id="folder-almost-count">0</span> (0%)
+                    </span>
+                    <span class="stat not-yet-stat">
+                        <span class="dot not-yet"></span>
+                        <span id="folder-not-yet-count">1</span> (100%)
+                    </span>
+                </div>
+            </div>
+
+            <div class="sentence-creation">
+                <textarea id="new-sentence-input" placeholder="新しい文章を入力して暗記しましょう" rows="3"></textarea>
+                <button id="add-sentence-btn" class="primary-btn">
+                    <span class="plus-icon">+</span> 追加
+                </button>
+            </div>
+
+            <div class="sentences-container">
+                <div id="sentences-list"></div>
+                <div id="sentences-empty-state" class="empty-state hidden">
+                    <h3>入力した文章</h3>
+                    <p>まだ文章がありません。<br>上記のフィールドから新しい文章を追加してください。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 暗記確認アプリ - 修正版
+        class MemoryApp {
+            constructor() {
+                this.folders = this.loadData();
+                this.currentFolderId = null;
+                this.initialize();
+            }
+
+            initialize() {
+                // DOMが読み込まれてからイベントを設定
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => this.setupApp());
+                } else {
+                    this.setupApp();
+                }
+            }
+
+            setupApp() {
+                this.bindAllEvents();
+                this.renderFolders();
+                this.updateTotalProgress();
+                console.log('アプリが初期化されました');
+            }
+
+            bindAllEvents() {
+                // 基本的なボタンイベント
+                this.bindBasicEvents();
+                
+                // フォルダリストのクリックイベント
+                this.bindFolderEvents();
+                
+                // 文章リストのクリックイベント
+                this.bindSentenceEvents();
+            }
+
+            bindBasicEvents() {
+                const createBtn = document.getElementById('create-folder-btn');
+                const folderInput = document.getElementById('new-folder-input');
+                const addBtn = document.getElementById('add-sentence-btn');
+                const sentenceInput = document.getElementById('new-sentence-input');
+                const backBtn = document.getElementById('back-btn');
+                const deleteBtn = document.getElementById('delete-folder-btn');
+
+                if (createBtn) {
+                    createBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.createFolder();
+                    });
+                }
+
+                if (folderInput) {
+                    folderInput.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            this.createFolder();
+                        }
+                    });
+                }
+
+                if (addBtn) {
+                    addBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.addSentence();
+                    });
+                }
+
+                if (sentenceInput) {
+                    sentenceInput.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter' && e.ctrlKey) {
+                            e.preventDefault();
+                            this.addSentence();
+                        }
+                    });
+                }
+
+                if (backBtn) {
+                    backBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.showFolderList();
+                    });
+                }
+
+                if (deleteBtn) {
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.deleteCurrentFolder();
+                    });
+                }
+            }
+
+            bindFolderEvents() {
+                const foldersList = document.getElementById('folders-list');
+                if (foldersList) {
+                    // 古いイベントリスナーを削除
+                    foldersList.removeEventListener('click', this.handleFolderClick);
+                    // 新しいイベントリスナーを追加
+                    this.handleFolderClick = (e) => {
+                        e.preventDefault();
+                        const folderCard = e.target.closest('.folder-card');
+                        if (folderCard) {
+                            const folderId = folderCard.getAttribute('data-folder-id');
+                            console.log('フォルダクリック:', folderId);
+                            if (folderId) {
+                                this.openFolder(folderId);
+                            }
+                        }
+                    };
+                    foldersList.addEventListener('click', this.handleFolderClick);
+                }
+            }
+
+            bindSentenceEvents() {
+                const sentencesList = document.getElementById('sentences-list');
+                if (sentencesList) {
+                    // 古いイベントリスナーを削除
+                    sentencesList.removeEventListener('click', this.handleSentenceClick);
+                    // 新しいイベントリスナーを追加
+                    this.handleSentenceClick = (e) => {
+                        e.preventDefault();
+                        
+                        if (e.target.classList.contains('status-btn')) {
+                            const sentenceCard = e.target.closest('.sentence-card');
+                            const sentenceId = sentenceCard?.getAttribute('data-sentence-id');
+                            const status = e.target.getAttribute('data-status');
+                            if (sentenceId && status) {
+                                this.updateSentenceStatus(sentenceId, status);
+                            }
+                        }
+                        
+                        if (e.target.classList.contains('delete-sentence-btn')) {
+                            const sentenceCard = e.target.closest('.sentence-card');
+                            const sentenceId = sentenceCard?.getAttribute('data-sentence-id');
+                            if (sentenceId) {
+                                this.deleteSentence(sentenceId);
+                            }
+                        }
+                    };
+                    sentencesList.addEventListener('click', this.handleSentenceClick);
+                }
+            }
+
+            createFolder() {
+                const input = document.getElementById('new-folder-input');
+                if (!input) return;
+                
+                const name = input.value.trim();
+                
+                if (!name) {
+                    alert('フォルダ名を入力してください。');
+                    return;
+                }
+
+                if (this.folders.some(folder => folder.name === name)) {
+                    alert('同じ名前のフォルダがすでに存在します。');
+                    return;
+                }
+
+                const folder = {
+                    id: Date.now().toString(),
+                    name: name,
+                    sentences: [],
+                    createdAt: new Date().toISOString()
+                };
+
+                this.folders.push(folder);
+                this.saveData();
+                this.renderFolders();
+                this.updateTotalProgress();
+                
+                input.value = '';
+                input.focus();
+            }
+
+            deleteCurrentFolder() {
+                if (this.currentFolderId) {
+                    if (confirm('このフォルダとすべての文章を削除しますか？')) {
+                        this.folders = this.folders.filter(folder => folder.id !== this.currentFolderId);
+                        this.saveData();
+                        this.showFolderList();
+                    }
+                }
+            }
+
+            openFolder(folderId) {
+                console.log('フォルダを開く:', folderId);
+                this.currentFolderId = folderId;
+                const folder = this.folders.find(f => f.id === folderId);
+                
+                if (!folder) {
+                    console.error('フォルダが見つかりません:', folderId);
+                    return;
+                }
+
+                const folderNameElement = document.getElementById('current-folder-name');
+                if (folderNameElement) {
+                    folderNameElement.textContent = folder.name;
+                }
+                
+                this.renderSentences();
+                this.updateFolderProgress();
+                this.showSentenceList();
+            }
+
+            addSentence() {
+                const textarea = document.getElementById('new-sentence-input');
+                if (!textarea) return;
+                
+                const text = textarea.value.trim();
+                
+                if (!text) {
+                    alert('文章を入力してください。');
+                    return;
+                }
+
+                const folder = this.folders.find(f => f.id === this.currentFolderId);
+                if (!folder) return;
+
+                const sentence = {
+                    id: Date.now().toString(),
+                    text: text,
+                    status: 'not-yet',
+                    createdAt: new Date().toISOString()
+                };
+
+                folder.sentences.push(sentence);
+                this.saveData();
+                this.renderSentences();
+                this.updateFolderProgress();
+                this.updateTotalProgress();
+                
+                textarea.value = '';
+                textarea.focus();
+            }
+
+            deleteSentence(sentenceId) {
+                const folder = this.folders.find(f => f.id === this.currentFolderId);
+                if (!folder) return;
+
+                folder.sentences = folder.sentences.filter(s => s.id !== sentenceId);
+                this.saveData();
+                this.renderSentences();
+                this.updateFolderProgress();
+                this.updateTotalProgress();
+            }
+
+            updateSentenceStatus(sentenceId, status) {
+                const folder = this.folders.find(f => f.id === this.currentFolderId);
+                if (!folder) return;
+
+                const sentence = folder.sentences.find(s => s.id === sentenceId);
+                if (!sentence) return;
+
+                sentence.status = status;
+                this.saveData();
+                this.renderSentences();
+                this.updateFolderProgress();
+                this.updateTotalProgress();
+            }
+
+            renderFolders() {
+                const container = document.getElementById('folders-list');
+                const emptyState = document.getElementById('empty-state');
+                
+                if (!container) return;
+                
+                if (this.folders.length === 0) {
+                    container.innerHTML = '';
+                    if (emptyState) emptyState.style.display = 'block';
+                    return;
+                }
+
+                if (emptyState) emptyState.style.display = 'none';
+                
+                container.innerHTML = this.folders.map(folder => {
+                    const stats = this.calculateFolderStats(folder);
+                    const total = stats.perfect + stats.almost + stats.notYet;
+                    
+                    return `
+                        <div class="folder-card" data-folder-id="${folder.id}" style="cursor: pointer;">
+                            <h3>${this.escapeHtml(folder.name)}</h3>
+                            <div class="folder-progress">
+                                <div class="progress-bar">
+                                    <div class="progress-segment perfect" style="width: ${total ? (stats.perfect / total) * 100 : 0}%"></div>
+                                    <div class="progress-segment almost" style="width: ${total ? (stats.almost / total) * 100 : 0}%"></div>
+                                    <div class="progress-segment not-yet" style="width: ${total ? (stats.notYet / total) * 100 : 0}%"></div>
+                                </div>
+                                <div class="progress-stats">
+                                    <span class="stat perfect-stat">
+                                        <span class="dot perfect"></span>
+                                        ${stats.perfect} (${total ? Math.round((stats.perfect / total) * 100) : 0}%)
+                                    </span>
+                                    <span class="stat almost-stat">
+                                        <span class="dot almost"></span>
+                                        ${stats.almost} (${total ? Math.round((stats.almost / total) * 100) : 0}%)
+                                    </span>
+                                    <span class="stat not-yet-stat">
+                                        <span class="dot not-yet"></span>
+                                        ${stats.notYet} (${total ? Math.round((stats.notYet / total) * 100) : 0}%)
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                // レンダリング後にイベントを再バインド
+                this.bindFolderEvents();
+                console.log('フォルダリストをレンダリングしました:', this.folders.length, '個');
+            }
+
+            renderSentences() {
+                const container = document.getElementById('sentences-list');
+                const emptyState = document.getElementById('sentences-empty-state');
+                const folder = this.folders.find(f => f.id === this.currentFolderId);
+                
+                if (!container) return;
+                
+                if (!folder || folder.sentences.length === 0) {
+                    container.innerHTML = '';
+                    if (emptyState) emptyState.classList.remove('hidden');
+                    return;
+                }
+
+                if (emptyState) emptyState.classList.add('hidden');
+                
+                container.innerHTML = folder.sentences.map(sentence => `
+                    <div class="sentence-card" data-sentence-id="${sentence.id}">
+                        <div class="sentence-text">${this.escapeHtml(sentence.text)}</div>
+                        <div class="sentence-controls">
+                            <div class="status-buttons">
+                                <button class="status-btn perfect ${sentence.status === 'perfect' ? 'active' : ''}" 
+                                        data-status="perfect">完璧</button>
+                                <button class="status-btn almost ${sentence.status === 'almost' ? 'active' : ''}" 
+                                        data-status="almost">大体</button>
+                                <button class="status-btn not-yet ${sentence.status === 'not-yet' ? 'active' : ''}" 
+                                        data-status="not-yet">リセット</button>
+                            </div>
+                            <button class="delete-sentence-btn" title="削除">🗑️</button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                // レンダリング後にイベントを再バインド
+                this.bindSentenceEvents();
+            }
+
+            calculateFolderStats(folder) {
+                const stats = { perfect: 0, almost: 0, notYet: 0 };
+                
+                folder.sentences.forEach(sentence => {
+                    switch (sentence.status) {
+                        case 'perfect':
+                            stats.perfect++;
+                            break;
+                        case 'almost':
+                            stats.almost++;
+                            break;
+                        case 'not-yet':
+                            stats.notYet++;
+                            break;
+                    }
+                });
+
+                return stats;
+            }
+
+            calculateTotalStats() {
+                const stats = { perfect: 0, almost: 0, notYet: 0 };
+                
+                this.folders.forEach(folder => {
+                    const folderStats = this.calculateFolderStats(folder);
+                    stats.perfect += folderStats.perfect;
+                    stats.almost += folderStats.almost;
+                    stats.notYet += folderStats.notYet;
+                });
+
+                return stats;
+            }
+
+            updateFolderProgress() {
+                const folder = this.folders.find(f => f.id === this.currentFolderId);
+                if (!folder) return;
+
+                const stats = this.calculateFolderStats(folder);
+                const total = stats.perfect + stats.almost + stats.notYet;
+
+                // プログレスバーの更新
+                const perfectBar = document.getElementById('folder-perfect-progress');
+                const almostBar = document.getElementById('folder-almost-progress');
+                const notYetBar = document.getElementById('folder-not-yet-progress');
+
+                if (perfectBar) perfectBar.style.width = total ? `${(stats.perfect / total) * 100}%` : '0%';
+                if (almostBar) almostBar.style.width = total ? `${(stats.almost / total) * 100}%` : '0%';
+                if (notYetBar) notYetBar.style.width = total ? `${(stats.notYet / total) * 100}%` : '0%';
+
+                // 統計情報の更新
+                const perfectCount = document.getElementById('folder-perfect-count');
+                const almostCount = document.getElementById('folder-almost-count');
+                const notYetCount = document.getElementById('folder-not-yet-count');
+
+                if (perfectCount) perfectCount.textContent = stats.perfect;
+                if (almostCount) almostCount.textContent = stats.almost;
+                if (notYetCount) notYetCount.textContent = stats.notYet;
+
+                // パーセンテージの更新
+                const perfectPercent = total ? Math.round((stats.perfect / total) * 100) : 0;
+                const almostPercent = total ? Math.round((stats.almost / total) * 100) : 0;
+                const notYetPercent = total ? Math.round((stats.notYet / total) * 100) : 0;
+
+                const perfectStat = document.querySelector('#sentence-list-view .perfect-stat');
+                const almostStat = document.querySelector('#sentence-list-view .almost-stat');
+                const notYetStat = document.querySelector('#sentence-list-view .not-yet-stat');
+
+                if (perfectStat) perfectStat.innerHTML = `<span class="dot perfect"></span>${stats.perfect} (${perfectPercent}%)`;
+                if (almostStat) almostStat.innerHTML = `<span class="dot almost"></span>${stats.almost} (${almostPercent}%)`;
+                if (notYetStat) notYetStat.innerHTML = `<span class="dot not-yet"></span>${stats.notYet} (${notYetPercent}%)`;
+            }
+
+            updateTotalProgress() {
+                const stats = this.calculateTotalStats();
+                const total = stats.perfect + stats.almost + stats.notYet;
+
+                // プログレスバーの更新
+                const perfectBar = document.getElementById('total-perfect-progress');
+                const almostBar = document.getElementById('total-almost-progress');
+                const notYetBar = document.getElementById('total-not-yet-progress');
+
+                if (perfectBar) perfectBar.style.width = total ? `${(stats.perfect / total) * 100}%` : '0%';
+                if (almostBar) almostBar.style.width = total ? `${(stats.almost / total) * 100}%` : '0%';
+                if (notYetBar) notYetBar.style.width = total ? `${(stats.notYet / total) * 100}%` : '0%';
+
+                // 統計情報の更新
+                const perfectCount = document.getElementById('total-perfect-count');
+                const almostCount = document.getElementById('total-almost-count');
+                const notYetCount = document.getElementById('total-not-yet-count');
+
+                if (perfectCount) perfectCount.textContent = stats.perfect;
+                if (almostCount) almostCount.textContent = stats.almost;
+                if (notYetCount) notYetCount.textContent = stats.notYet;
+
+                // パーセンテージの更新
+                const perfectPercent = total ? Math.round((stats.perfect / total) * 100) : 0;
+                const almostPercent = total ? Math.round((stats.almost / total) * 100) : 0;
+                const notYetPercent = total ? Math.round((stats.notYet / total) * 100) : 0;
+
+                const perfectStat = document.querySelector('#folder-list-view .perfect-stat');
+                const almostStat = document.querySelector('#folder-list-view .almost-stat');
+                const notYetStat = document.querySelector('#folder-list-view .not-yet-stat');
+
+                if (perfectStat) perfectStat.innerHTML = `<span class="dot perfect"></span>${stats.perfect} (${perfectPercent}%)`;
+                if (almostStat) almostStat.innerHTML = `<span class="dot almost"></span>${stats.almost} (${almostPercent}%)`;
+                if (notYetStat) notYetStat.innerHTML = `<span class="dot not-yet"></span>${stats.notYet} (${notYetPercent}%)`;
+            }
+
+            showFolderList() {
+                const folderView = document.getElementById('folder-list-view');
+                const sentenceView = document.getElementById('sentence-list-view');
+                
+                if (folderView) folderView.classList.remove('hidden');
+                if (sentenceView) sentenceView.classList.add('hidden');
+                
+                this.currentFolderId = null;
+                this.renderFolders();
+                this.updateTotalProgress();
+                console.log('フォルダ一覧に戻りました');
+            }
+
+            showSentenceList() {
+                const folderView = document.getElementById('folder-list-view');
+                const sentenceView = document.getElementById('sentence-list-view');
+                
+                if (folderView) folderView.classList.add('hidden');
+                if (sentenceView) sentenceView.classList.remove('hidden');
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            saveData() {
+                try {
+                    localStorage.setItem('memoryAppData', JSON.stringify(this.folders));
+                } catch (error) {
+                    console.error('データの保存に失敗しました:', error);
+                }
+            }
+
+            loadData() {
+                try {
+                    const data = localStorage.getItem('memoryAppData');
+                    return data ? JSON.parse(data) : [];
+                } catch (error) {
+                    console.error('データの読み込みに失敗しました:', error);
+                    return [];
+                }
+            }
+        }
+
+        // アプリケーションの初期化
+        let app;
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                app = new MemoryApp();
+            });
+        } else {
+            app = new MemoryApp();
+        }
+    </script>
+</body>
+</html> 
