@@ -398,6 +398,11 @@ body {
         width: 100%;
         min-height: 80px;
     }
+        /* スマホでの文章追加ボタンを全幅に */
+    .sentence-creation .primary-btn {
+        width: 100%;
+        justify-content: center;
+    }
     
     .folder-header {
         padding: 0;
