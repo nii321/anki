@@ -102,7 +102,7 @@
     </div>
 
     <script>
-        // 暗記確認アプリ 
+        // 暗記確認アプリ - 修正版
         class MemoryApp {
             constructor() {
                 this.folders = this.loadData();
@@ -355,6 +355,12 @@
                 if (!sentence) return;
 
                 sentence.status = status;
+                
+                // 完璧ボタンを押したときにバイブレーション
+                if (status === 'perfect') {
+                    this.triggerVibration();
+                }
+                
                 this.saveData();
                 this.renderSentences();
                 this.updateFolderProgress();
@@ -575,6 +581,18 @@
                 
                 if (folderView) folderView.classList.add('hidden');
                 if (sentenceView) sentenceView.classList.remove('hidden');
+            }
+
+            triggerVibration() {
+                // バイブレーション機能のサポートを確認
+                if ('vibrate' in navigator) {
+                    try {
+                        // 短い振動を2回（成功を表現）: 振動100ms → 停止50ms → 振動100ms
+                        navigator.vibrate([100, 50, 100]);
+                    } catch (error) {
+                        console.log('バイブレーションに失敗しました:', error);
+                    }
+                }
             }
 
             escapeHtml(text) {
