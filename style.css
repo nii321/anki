@@ -283,6 +283,16 @@ body {
     border: 1px solid rgba(100, 116, 139, 0.2);
 }
 
+.sentence-card.perfect-border {
+    border: 2px solid #4caf50;
+}
+.sentence-card.almost-border {
+    border: 2px solid #ff9800;
+}
+.sentence-card.not-yet-border {
+    border: 2px solid #bdbdbd;
+}
+
 .sentence-text {
     color: #e2e8f0;
     font-size: 1rem;
@@ -398,7 +408,8 @@ body {
         width: 100%;
         min-height: 80px;
     }
-        /* スマホでの文章追加ボタンを全幅に */
+    
+    /* スマホでの文章追加ボタンを全幅に */
     .sentence-creation .primary-btn {
         width: 100%;
         justify-content: center;
@@ -443,4 +454,19 @@ body {
         flex-shrink: 0;
         margin-left: 10px;
     }
+}
+
+.drag-handle {
+    cursor: grab;
+    user-select: none;
+    font-size: 1.5em;
+    margin-right: 8px;
+    display: flex;
+    align-items: center;
+    color: #888;
+    transition: color 0.2s;
+}
+
+.drag-handle:active {
+    color: #333;
 } 
