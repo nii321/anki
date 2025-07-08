@@ -441,12 +441,12 @@ body {
     /* スマホでの文章カードをよりコンパクトに */
     .sentence-card {
         padding: 12px;
-        padding-top: 16px;
+        padding-top: 12px;
         margin-bottom: 8px;
     }
     
     .sentence-text {
-        margin-bottom: 12px;
+        margin-bottom: 14px;
         line-height: 1.4;
     }
     
