@@ -442,6 +442,7 @@ body {
     .sentence-card {
         padding: 12px;
         padding-top: 12px;
+        padding-bottom: 8px; 
         margin-bottom: 8px;
     }
     
