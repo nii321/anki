@@ -126,7 +126,69 @@
                 this.bindAllEvents();
                 this.renderFolders();
                 this.updateTotalProgress();
+                
+                // Androidの戻るボタン対応のためのpopstateイベントリスナーを追加
+                this.setupBackNavigation();
+                
+                // URLハッシュから初期状態を復元
+                this.restoreFromURL();
+                
                 console.log('アプリが初期化されました');
+            }
+
+            setupBackNavigation() {
+                // ブラウザの戻るボタン（Androidの戻るボタン含む）のイベントリスナー
+                window.addEventListener('popstate', (event) => {
+                    console.log('popstate イベントが発生しました:', event.state);
+                    
+                    if (event.state && event.state.view === 'folder') {
+                        // フォルダ画面の状態
+                        if (event.state.folderId) {
+                            // 特定のフォルダを開く
+                            this.openFolder(event.state.folderId, false); // history.pushStateを呼ばないように引数追加
+                        }
+                    } else {
+                        // フォルダ一覧画面に戻る
+                        this.showFolderList(false); // history.pushStateを呼ばないように引数追加
+                    }
+                });
+
+                // 初期状態をhistoryに記録（フォルダ一覧画面）
+                if (!window.history.state) {
+                    window.history.replaceState({ view: 'folder-list' }, '', '#folder-list');
+                }
+            }
+
+            restoreFromURL() {
+                const hash = window.location.hash;
+                console.log('URLハッシュから状態を復元:', hash);
+                
+                if (hash.startsWith('#folder-') && hash !== '#folder-list') {
+                    // フォルダIDを抽出
+                    const folderId = hash.replace('#folder-', '');
+                    const folder = this.folders.find(f => f.id === folderId);
+                    
+                    if (folder) {
+                        // 存在するフォルダの場合、そのフォルダを開く（履歴更新なし）
+                        this.openFolder(folderId, false);
+                        // 現在の状態をhistoryに記録
+                        window.history.replaceState(
+                            { view: 'folder', folderId: folderId, folderName: folder.name }, 
+                            '', 
+                            hash
+                        );
+                    } else {
+                        // 存在しないフォルダの場合、フォルダ一覧に戻る
+                        this.showFolderList(false);
+                        window.history.replaceState({ view: 'folder-list' }, '', '#folder-list');
+                    }
+                } else {
+                    // デフォルトはフォルダ一覧画面
+                    this.showFolderList(false);
+                    if (hash !== '#folder-list') {
+                        window.history.replaceState({ view: 'folder-list' }, '', '#folder-list');
+                    }
+                }
             }
 
             bindAllEvents() {
@@ -184,7 +246,8 @@
                 if (backBtn) {
                     backBtn.addEventListener('click', (e) => {
                         e.preventDefault();
-                        this.showFolderList();
+                        // ブラウザの履歴を使って戻る（Androidの戻るボタンと同じ動作）
+                        window.history.back();
                     });
                 }
 
@@ -306,7 +369,7 @@
                 }
             }
 
-            openFolder(folderId) {
+            openFolder(folderId, updateHistory = true) {
                 // 編集中の文章がある場合は先に終了
                 this.cancelEditingSentence();
                 
@@ -322,6 +385,15 @@
                 const folderNameElement = document.getElementById('current-folder-name');
                 if (folderNameElement) {
                     folderNameElement.textContent = folder.name;
+                }
+                
+                // ブラウザ履歴にフォルダ画面の状態を追加（戻るボタン対応）
+                if (updateHistory) {
+                    window.history.pushState(
+                        { view: 'folder', folderId: folderId, folderName: folder.name }, 
+                        '', 
+                        `#folder-${folderId}`
+                    );
                 }
                 
                 this.renderSentences();
@@ -602,7 +674,7 @@
                 if (notYetStat) notYetStat.innerHTML = `<span class="dot not-yet"></span>${stats.notYet} (${notYetPercent}%)`;
             }
 
-            showFolderList() {
+            showFolderList(updateHistory = true) {
                 // 編集中の文章がある場合は先に終了
                 this.cancelEditingSentence();
                 
@@ -611,6 +683,11 @@
                 
                 if (folderView) folderView.classList.remove('hidden');
                 if (sentenceView) sentenceView.classList.add('hidden');
+                
+                // ブラウザ履歴にフォルダ一覧画面の状態を追加（戻るボタン対応）
+                if (updateHistory) {
+                    window.history.pushState({ view: 'folder-list' }, '', '#folder-list');
+                }
                 
                 this.currentFolderId = null;
                 this.isEditMode = false; // 編集モードをリセット
