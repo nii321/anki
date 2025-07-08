@@ -277,8 +277,8 @@ body {
 .sentence-card {
     background: rgba(30, 41, 59, 0.8);
     border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 15px;
+    padding: 15px;
+    margin-bottom: 10px;
     transition: all 0.3s ease;
     border: 1px solid rgba(100, 116, 139, 0.2);
 }
@@ -296,8 +296,8 @@ body {
 .sentence-text {
     color: #e2e8f0;
     font-size: 1rem;
-    line-height: 1.6;
-    margin-bottom: 15px;
+    line-height: 1.5;
+    margin-bottom: 10px;
     word-wrap: break-word;
 }
 
@@ -434,7 +434,18 @@ body {
         justify-content: space-between;
         align-items: center;
         gap: 10px;
-        margin-top: 15px;
+        margin-top: 10px;
+    }
+    
+    /* スマホでの文章カードをよりコンパクトに */
+    .sentence-card {
+        padding: 12px;
+        margin-bottom: 8px;
+    }
+    
+    .sentence-text {
+        margin-bottom: 8px;
+        line-height: 1.4;
     }
     
     .status-buttons {
@@ -459,8 +470,8 @@ body {
     .edit-controls {
         flex-wrap: wrap;
         gap: 6px;
-        margin-top: 10px;
-        padding-top: 10px;
+        margin-top: 8px;
+        padding-top: 8px;
     }
     
     .drag-handle, .edit-sentence-btn {
@@ -483,66 +494,21 @@ body {
     /* スマホでの直接編集機能 */
     .edit-textarea {
         font-size: 0.9rem;
-        padding: 12px;
-        min-height: 70px;
+        padding: 10px;
+        min-height: 60px;
+        margin: 6px 0;
     }
     
     .edit-actions {
         flex-direction: column;
-        gap: 8px;
-        margin-top: 10px;
+        gap: 6px;
+        margin-top: 8px;
     }
     
     .save-edit-btn, .cancel-edit-btn {
         padding: 10px 16px;
         font-size: 0.8rem;
         width: 100%;
-    }
-    
-    /* スマホでのドラッグ&ドロップスタイル */
-    .sortable-ghost {
-        opacity: 0;
-        visibility: hidden;
-    }
-    
-    .sortable-chosen {
-        background: rgba(96, 165, 250, 0.1);
-        box-shadow: 0 8px 25px rgba(96, 165, 250, 0.5);
-        transform: scale(1.02);
-    }
-    
-    .sortable-drag {
-        opacity: 0.9;
-        transform: rotate(2deg) scale(1.05);
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-        z-index: 1000;
-    }
-    
-    #sentences-list.sorting {
-        background: rgba(96, 165, 250, 0.03);
-    }
-    
-    /* スマホでのフォールバック表示 */
-    .sortable-fallback {
-        opacity: 0.9;
-        background: rgba(96, 165, 250, 0.95);
-        border: 2px solid #3b82f6;
-        border-radius: 12px;
-        transform: rotate(2deg) scale(1.02);
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-        z-index: 999;
-    }
-    
-    /* スマホでのドロップ先ライン調整 */
-    #sentences-list.sorting .sentence-card:before {
-        top: -8px;
-        height: 4px;
-        border-radius: 2px;
-        transition: all 0.2s ease;
-    }
-    
-    #sentences-list.sorting .sentence-card:hover:before {
-        box-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
     }
 }
 
@@ -569,8 +535,8 @@ body {
 .edit-controls {
     display: flex;
     gap: 10px;
-    margin-top: 15px;
-    padding-top: 15px;
+    margin-top: 10px;
+    padding-top: 10px;
     border-top: 1px solid rgba(100, 116, 139, 0.2);
     justify-content: flex-start;
     align-items: center;
@@ -637,11 +603,10 @@ body {
     transform: translateY(-1px);
 }
 
-/* ドラッグ&ドロップ中のスタイル - PC */
+/* ドラッグ&ドロップ中のスタイル */
 .sortable-ghost {
-    opacity: 0.4;
-    background: rgba(96, 165, 250, 0.1);
-    transform: rotate(5deg);
+    opacity: 0;
+    visibility: hidden;
 }
 
 .sortable-chosen {
@@ -663,28 +628,6 @@ body {
     transition: transform 0.2s ease;
 }
 
-/* PCでのドロップ先表示 */
-#sentences-list.sorting .sentence-card {
-    position: relative;
-}
-
-#sentences-list.sorting .sentence-card:before {
-    content: '';
-    position: absolute;
-    top: -6px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: transparent;
-    border-radius: 1px;
-    transition: all 0.15s ease;
-}
-
-#sentences-list.sorting .sentence-card:hover:before {
-    background: #60a5fa;
-    box-shadow: 0 0 8px rgba(96, 165, 250, 0.4);
-}
-
 /* 直接編集機能 */
 .sentence-card.editing {
     border: 2px solid #60a5fa;
@@ -699,11 +642,11 @@ body {
     border-radius: 8px;
     color: #e2e8f0;
     font-size: 1rem;
-    line-height: 1.6;
-    padding: 15px;
-    margin: 10px 0;
+    line-height: 1.5;
+    padding: 12px;
+    margin: 8px 0;
     resize: vertical;
-    min-height: 80px;
+    min-height: 70px;
     font-family: inherit;
 }
 
@@ -716,7 +659,7 @@ body {
 .edit-actions {
     display: flex;
     gap: 10px;
-    margin-top: 15px;
+    margin-top: 10px;
     justify-content: flex-end;
 }
 
