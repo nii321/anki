@@ -278,6 +278,7 @@ body {
     background: rgba(30, 41, 59, 0.8);
     border-radius: 12px;
     padding: 15px;
+    padding-top: 20px;
     margin-bottom: 10px;
     transition: all 0.3s ease;
     border: 1px solid rgba(100, 116, 139, 0.2);
@@ -297,7 +298,7 @@ body {
     color: #e2e8f0;
     font-size: 1rem;
     line-height: 1.5;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
     word-wrap: break-word;
 }
 
@@ -440,11 +441,12 @@ body {
     /* スマホでの文章カードをよりコンパクトに */
     .sentence-card {
         padding: 12px;
+        padding-top: 16px;
         margin-bottom: 8px;
     }
     
     .sentence-text {
-        margin-bottom: 8px;
+        margin-bottom: 12px;
         line-height: 1.4;
     }
     
@@ -502,7 +504,7 @@ body {
     .edit-actions {
         flex-direction: column;
         gap: 6px;
-        margin-top: 8px;
+        margin-top: 10px;
     }
     
     .save-edit-btn, .cancel-edit-btn {
@@ -644,7 +646,7 @@ body {
     font-size: 1rem;
     line-height: 1.5;
     padding: 12px;
-    margin: 8px 0;
+    margin: 10px 0;
     resize: vertical;
     min-height: 70px;
     font-family: inherit;
@@ -659,7 +661,7 @@ body {
 .edit-actions {
     display: flex;
     gap: 10px;
-    margin-top: 10px;
+    margin-top: 12px;
     justify-content: flex-end;
 }
 
