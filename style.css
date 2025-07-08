@@ -441,8 +441,8 @@ body {
     /* スマホでの文章カードをよりコンパクトに */
     .sentence-card {
         padding: 12px;
-        padding-top: 12px;
-        padding-bottom: 8px; 
+        padding-top: 10px;
+        padding-bottom: 6px; 
         margin-bottom: 8px;
     }
     
