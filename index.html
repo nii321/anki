@@ -59,6 +59,7 @@
             <header class="folder-header">
                 <button id="back-btn" class="back-btn">←</button>
                 <h2 id="current-folder-name">フォルダ名</h2>
+                <button id="edit-mode-btn" class="edit-btn">編集</button>
                 <button id="delete-folder-btn" class="delete-btn">🗑️</button>
             </header>
 
@@ -108,6 +109,7 @@
             constructor() {
                 this.folders = this.loadData();
                 this.currentFolderId = null;
+                this.isEditMode = false;
                 this.initialize();
             }
 
@@ -145,6 +147,7 @@
                 const sentenceInput = document.getElementById('new-sentence-input');
                 const backBtn = document.getElementById('back-btn');
                 const deleteBtn = document.getElementById('delete-folder-btn');
+                const editModeBtn = document.getElementById('edit-mode-btn');
 
                 if (createBtn) {
                     createBtn.addEventListener('click', (e) => {
@@ -189,6 +192,13 @@
                     deleteBtn.addEventListener('click', (e) => {
                         e.preventDefault();
                         this.deleteCurrentFolder();
+                    });
+                }
+
+                if (editModeBtn) {
+                    editModeBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.toggleEditMode();
                     });
                 }
             }
@@ -239,6 +249,16 @@
                                 this.deleteSentence(sentenceId);
                             }
                         }
+
+                        if (e.target.classList.contains('edit-sentence-btn')) {
+                            const sentenceCard = e.target.closest('.sentence-card');
+                            const sentenceId = sentenceCard?.getAttribute('data-sentence-id');
+                            if (sentenceId) {
+                                this.editSentence(sentenceId);
+                            }
+                        }
+
+
                     };
                     sentencesList.addEventListener('click', this.handleSentenceClick);
                 }
@@ -287,6 +307,9 @@
             }
 
             openFolder(folderId) {
+                // 編集中の文章がある場合は先に終了
+                this.cancelEditingSentence();
+                
                 console.log('フォルダを開く:', folderId);
                 this.currentFolderId = folderId;
                 const folder = this.folders.find(f => f.id === folderId);
@@ -434,27 +457,41 @@
 
                 if (emptyState) emptyState.classList.add('hidden');
                 
-                container.innerHTML = folder.sentences.map(sentence => `
-                    <div class="sentence-card ${sentence.status}-border" data-sentence-id="${sentence.id}">
-                        <div class="sentence-text">${this.escapeHtml(sentence.text)}</div>
-                        <div class="sentence-controls">
-                            <div class="status-buttons">
-                                <button class="status-btn perfect ${sentence.status === 'perfect' ? 'active' : ''}" 
-                                        data-status="perfect">完璧</button>
-                                <button class="status-btn almost ${sentence.status === 'almost' ? 'active' : ''}" 
-                                        data-status="almost">大体</button>
-                                <button class="status-btn not-yet ${sentence.status === 'not-yet' ? 'active' : ''}" 
-                                        data-status="not-yet">リセット</button>
+                container.innerHTML = folder.sentences.map((sentence, index) => {
+                    let editControls = '';
+                    if (this.isEditMode) {
+                        editControls = `
+                            <div class="edit-controls">
+                                <div class="drag-handle" title="ドラッグして並び替え">☰</div>
+                                <button class="delete-sentence-btn">削除</button>
+                                <button class="edit-sentence-btn">編集</button>
                             </div>
-                            <div class="drag-handle" title="ドラッグで並び替え">≡</div>
-                            <button class="delete-sentence-btn" title="削除">🗑️</button>
+                        `;
+                    }
+
+                    return `
+                        <div class="sentence-card ${sentence.status}-border" data-sentence-id="${sentence.id}">
+                            <div class="sentence-text">${this.escapeHtml(sentence.text)}</div>
+                            <div class="sentence-controls">
+                                <div class="status-buttons">
+                                    <button class="status-btn perfect ${sentence.status === 'perfect' ? 'active' : ''}" 
+                                            data-status="perfect">完璧</button>
+                                    <button class="status-btn almost ${sentence.status === 'almost' ? 'active' : ''}" 
+                                            data-status="almost">大体</button>
+                                    <button class="status-btn not-yet ${sentence.status === 'not-yet' ? 'active' : ''}" 
+                                            data-status="not-yet">リセット</button>
+                                </div>
+                            </div>
+                            ${editControls}
                         </div>
-                    </div>
-                `).join('');
-                // 並び替え機能を追加
-                this.enableSentenceSort();
+                    `;
+                }).join('');
+                
                 // レンダリング後にイベントを再バインド
                 this.bindSentenceEvents();
+                
+                // 編集モード時にドラッグ&ドロップ機能を有効化
+                this.enableSentenceSort();
             }
 
             calculateFolderStats(folder) {
@@ -566,6 +603,9 @@
             }
 
             showFolderList() {
+                // 編集中の文章がある場合は先に終了
+                this.cancelEditingSentence();
+                
                 const folderView = document.getElementById('folder-list-view');
                 const sentenceView = document.getElementById('sentence-list-view');
                 
@@ -573,6 +613,7 @@
                 if (sentenceView) sentenceView.classList.add('hidden');
                 
                 this.currentFolderId = null;
+                this.isEditMode = false; // 編集モードをリセット
                 this.renderFolders();
                 this.updateTotalProgress();
                 console.log('フォルダ一覧に戻りました');
@@ -623,27 +664,177 @@
             }
 
             enableSentenceSort() {
+                // 編集モードでない場合はソート機能を無効にする
+                if (!this.isEditMode) {
+                    if (this._sortableInstance) {
+                        this._sortableInstance.destroy();
+                        this._sortableInstance = null;
+                    }
+                    return;
+                }
+                
                 const container = document.getElementById('sentences-list');
                 if (!container) return;
+                
+                // 既存のインスタンスを破棄
                 if (this._sortableInstance) {
                     this._sortableInstance.destroy();
                 }
+                
+                // 新しいSortableインスタンスを作成
                 this._sortableInstance = Sortable.create(container, {
-                    handle: '.drag-handle',
-                    animation: 150,
+                    handle: '.drag-handle', // ドラッグハンドルを指定
+                    animation: 300, // アニメーション時間
+                    ghostClass: 'sortable-ghost', // ドラッグ中のゴーストクラス
+                    chosenClass: 'sortable-chosen', // 選択中のクラス
+                    dragClass: 'sortable-drag', // ドラッグ中のクラス
+                    onStart: (evt) => {
+                        // ドラッグ開始時に編集中の文章を終了
+                        this.cancelEditingSentence();
+                        // ドラッグ中であることを示すクラスを追加
+                        container.classList.add('sorting');
+                    },
                     onEnd: (evt) => {
+                        // ドラッグ終了時にクラスを削除
+                        container.classList.remove('sorting');
+                        
                         const folder = this.folders.find(f => f.id === this.currentFolderId);
                         if (!folder) return;
+                        
                         // 並び替え後の順序でsentences配列を更新
-                        const newOrder = Array.from(container.children).map(card => card.getAttribute('data-sentence-id'));
-                        folder.sentences = newOrder.map(id => folder.sentences.find(s => s.id === id));
+                        const newOrder = Array.from(container.children).map(card => 
+                            card.getAttribute('data-sentence-id')
+                        );
+                        
+                        // 新しい順序でsentences配列を再構築
+                        const newSentences = newOrder.map(id => 
+                            folder.sentences.find(s => s.id === id)
+                        ).filter(s => s); // undefinedを除外
+                        
+                        folder.sentences = newSentences;
+                        
+                        // データを保存
                         this.saveData();
-                        this.renderSentences(); // 再描画でイベント再バインド
+                        
+                        // プログレスを更新
                         this.updateFolderProgress();
                         this.updateTotalProgress();
+                        
+                        console.log('文章の順序が変更されました');
                     }
                 });
             }
+
+            toggleEditMode() {
+                // 編集中の文章がある場合は先に終了
+                this.cancelEditingSentence();
+                
+                this.isEditMode = !this.isEditMode;
+                const editBtn = document.getElementById('edit-mode-btn');
+                if (editBtn) {
+                    editBtn.textContent = this.isEditMode ? '完了' : '編集';
+                }
+                this.renderSentences();
+            }
+
+            editSentence(sentenceId) {
+                // 既に編集中の文章がある場合は、それを先に終了
+                this.cancelEditingSentence();
+                
+                const sentenceCard = document.querySelector(`[data-sentence-id="${sentenceId}"]`);
+                if (!sentenceCard) return;
+
+                const sentenceTextElement = sentenceCard.querySelector('.sentence-text');
+                const folder = this.folders.find(f => f.id === this.currentFolderId);
+                const sentence = folder?.sentences.find(s => s.id === sentenceId);
+                
+                if (!sentence || !sentenceTextElement) return;
+
+                // 編集状態のマーク
+                sentenceCard.classList.add('editing');
+                
+                // テキストエリアを作成
+                const textarea = document.createElement('textarea');
+                textarea.value = sentence.text;
+                textarea.className = 'edit-textarea';
+                textarea.rows = 3;
+                
+                // 保存・キャンセルボタンを作成
+                const editActions = document.createElement('div');
+                editActions.className = 'edit-actions';
+                editActions.innerHTML = `
+                    <button class="save-edit-btn">保存</button>
+                    <button class="cancel-edit-btn">キャンセル</button>
+                `;
+                
+                // 元のテキストを隠してテキストエリアを表示
+                sentenceTextElement.style.display = 'none';
+                sentenceTextElement.parentNode.insertBefore(textarea, sentenceTextElement.nextSibling);
+                sentenceTextElement.parentNode.insertBefore(editActions, textarea.nextSibling);
+                
+                // フォーカスを当てる
+                textarea.focus();
+                textarea.select();
+                
+                // イベントリスナーを追加
+                const saveBtn = editActions.querySelector('.save-edit-btn');
+                const cancelBtn = editActions.querySelector('.cancel-edit-btn');
+                
+                saveBtn.addEventListener('click', () => {
+                    const newText = textarea.value.trim();
+                    if (newText) {
+                        sentence.text = newText;
+                        this.saveData();
+                    }
+                    this.finishEditingSentence(sentenceCard);
+                });
+                
+                cancelBtn.addEventListener('click', () => {
+                    this.finishEditingSentence(sentenceCard);
+                });
+                
+                // Enterキー（Ctrl+Enter）で保存
+                textarea.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && e.ctrlKey) {
+                        e.preventDefault();
+                        saveBtn.click();
+                    }
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        cancelBtn.click();
+                    }
+                });
+            }
+
+            finishEditingSentence(sentenceCard) {
+                const sentenceTextElement = sentenceCard.querySelector('.sentence-text');
+                const textarea = sentenceCard.querySelector('.edit-textarea');
+                const editActions = sentenceCard.querySelector('.edit-actions');
+                
+                // 編集要素を削除
+                if (textarea) textarea.remove();
+                if (editActions) editActions.remove();
+                
+                // 元のテキストを表示
+                if (sentenceTextElement) {
+                    sentenceTextElement.style.display = 'block';
+                }
+                
+                // 編集状態のマークを削除
+                sentenceCard.classList.remove('editing');
+                
+                // 文章を再レンダリングして最新の内容を反映
+                this.renderSentences();
+            }
+
+            cancelEditingSentence() {
+                const editingCard = document.querySelector('.sentence-card.editing');
+                if (editingCard) {
+                    this.finishEditingSentence(editingCard);
+                }
+            }
+
+
         }
 
         // アプリケーションの初期化
